@@ -3,7 +3,6 @@ import {
   addRecipe,
   deleteRecipe,
   updateRecipe,
-  completeRecipe,
   getRecipes,
   importRecipes,
   exportRecipes,
@@ -18,7 +17,6 @@ const recipeRouter = Router();
 recipeRouter.post("/register", isAuth, addRecipe);
 recipeRouter.delete("/delete/:_id", isAuth, deleteRecipe);
 recipeRouter.patch("/update/:_id", isAuth, updateRecipe);
-recipeRouter.patch("/complete/:_id", isAuth, completeRecipe);
 recipeRouter.get("/getRecipes", isAuth, getRecipes);
 recipeRouter.post("/import", isAuth, upload.single("file"), importRecipes);
 recipeRouter.get("/export", isAuth, exportRecipes);

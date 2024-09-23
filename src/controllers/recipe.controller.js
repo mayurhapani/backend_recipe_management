@@ -2,7 +2,6 @@ import { userModel } from "../models/user.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { sendTaskNotification } from "../helpers/firebaseAdmin.js";
 
 //new
 import path from "path";
@@ -44,56 +43,36 @@ const addRecipe = asyncHandler(async (req, res) => {
 const deleteRecipe = asyncHandler(async (req, res) => {
   const { _id } = req.params;
 
-  const task = await recipeModel.findOne({ _id });
+  const Recipe = await recipeModel.findOne({ _id });
 
-  if (!task) throw new ApiError(402, "Task not found");
+  if (!Recipe) throw new ApiError(402, "Recipe not found");
 
-  const deletedTask = await recipeModel.findOneAndDelete({ _id });
+  const deletedRecipe = await recipeModel.findOneAndDelete({ _id });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, deletedTask, "Task deleted successfully"));
+    .json(new ApiResponse(200, deletedRecipe, "Recipe deleted successfully"));
 });
 
 const updateRecipe = asyncHandler(async (req, res) => {
-  const { title, description, category } = req.body;
+  const { title, ingredients, type, cookingTime } = req.body;
   const { _id } = req.params;
 
   // validation error
-  const task = await recipeModel.findByIdAndUpdate(_id, {
+  const recipe = await recipeModel.findByIdAndUpdate(_id, {
     title,
-    description,
-    category,
+    ingredients,
+    type,
+    cookingTime,
   });
 
-  if (!task) {
+  if (!recipe) {
     throw new ApiError(402, "Post not found");
   } else {
     return res
       .status(200)
-      .json(new ApiResponse(200, task, "Task updated successfully"));
+      .json(new ApiResponse(200, recipe, "Task updated successfully"));
   }
-});
-
-const completeRecipe = asyncHandler(async (req, res) => {
-  const { _id } = req.params;
-
-  // validation error
-  const isTask = await recipeModel.findById(_id);
-  if (!isTask) {
-    throw new ApiError(402, "Post not found");
-  }
-
-  //task update as completed
-  const task = await recipeModel.findByIdAndUpdate(
-    _id,
-    { isCompleted: !isTask.isCompleted },
-    { new: true }
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, task, "Task status updated"));
 });
 
 const getRecipes = asyncHandler(async (req, res) => {
@@ -118,18 +97,16 @@ const getRecipes = asyncHandler(async (req, res) => {
       .find(query)
       .skip(skip)
       .limit(limit)
-      .populate("createdBy", "name")
-      .populate("assignTo", "name");
+      .populate("createdBy", "name");
   } else {
     tasks = await recipeModel
       .find({ ...query, assignTo: req.user._id })
       .skip(skip)
       .limit(limit)
-      .populate("createdBy", "name")
-      .populate("assignTo", "name");
+      .populate("createdBy", "name");
   }
 
-  return res.json(new ApiResponse(200, tasks, "Tasks retrieved successfully"));
+  return res.json(new ApiResponse(200, tasks, "Recipe retrieved successfully"));
 });
 
 const importRecipes = asyncHandler(async (req, res) => {
@@ -145,12 +122,8 @@ const importRecipes = asyncHandler(async (req, res) => {
     // Convert isCompleted and map user names to ObjectId
     const formattedTasks = await Promise.all(
       tasks.map(async (task) => {
-        // Convert 'TRUE'/'FALSE' to boolean
-        const isCompleted = task.isCompleted === "TRUE";
-
         // Find users by name for createdBy and assignTo fields
         const createdByUser = await userModel.findOne({ name: task.createdBy });
-        const assignToUser = await userModel.findOne({ name: task.assignTo });
 
         if (!createdByUser || !assignToUser) {
           throw new ApiError(400, "Invalid user in createdBy or assignTo");
@@ -159,9 +132,7 @@ const importRecipes = asyncHandler(async (req, res) => {
         // Return formatted task with ObjectId references
         return {
           ...task,
-          isCompleted,
           createdBy: createdByUser._id, // Replace name with ObjectId
-          assignTo: assignToUser._id, // Replace name with ObjectId
           createdAt: new Date(task.createdAt), // Ensure date is valid
           updatedAt: new Date(task.updatedAt), // Ensure date is valid
         };
@@ -183,21 +154,16 @@ const importRecipes = asyncHandler(async (req, res) => {
 });
 
 const exportRecipes = asyncHandler(async (req, res) => {
-  const tasks = await recipeModel
-    .find({})
-    .populate("createdBy")
-    .populate("assignTo");
+  const tasks = await recipeModel.find({}).populate("createdBy");
 
   // Process the data to remove unwanted fields and ensure proper CSV format
   const csvData = [];
   tasks.forEach((task) => {
     const cleanTask = {
       title: task.title,
-      description: task.description,
-      category: task.category,
+      ingredients: task.ingredients,
+      type: task.type,
       createdBy: task.createdBy.name,
-      assignTo: task.assignTo.name,
-      isCompleted: task.isCompleted,
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString(),
     };
@@ -215,7 +181,6 @@ export {
   deleteRecipe,
   updateRecipe,
   getRecipes,
-  completeRecipe,
   importRecipes,
   exportRecipes,
 };
