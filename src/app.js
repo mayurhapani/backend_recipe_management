@@ -2,9 +2,9 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { userRouter } from "./routers/user.router.js";
-import { taskRouter } from "./routers/task.router.js";
 import path from "path"; // Add this import
 import admin from "firebase-admin";
+import { recipeRouter } from "./routers/recipe.router.js";
 
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -52,6 +52,6 @@ app.get("/", (req, res) => {
   res.send("welcome!");
 });
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/tasks", taskRouter);
+app.use("/api/v1/Recipes", recipeRouter);
 
 export { app };
