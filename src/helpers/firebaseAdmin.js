@@ -1,14 +1,8 @@
 import admin from "./firebase.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// // Correct path to firebaseConfig.json
-// const serviceAccountPath = join(__dirname, "../firebaseConfig.json");
-// const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
 
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,

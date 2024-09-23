@@ -1,1 +1,1 @@
-export const DB_NAME = "Sundaram_Enterprise";
+export const DB_NAME = "Recipes_management";

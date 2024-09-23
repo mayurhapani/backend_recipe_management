@@ -24,12 +24,6 @@ const userSchema = new Schema(
       default: "user",
       enum: ["user", "admin"],
     },
-    tasks: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Task",
-      },
-    ],
     fcmToken: {
       type: String,
       default: "",

@@ -1,55 +1,39 @@
-import { taskModel } from "../models/task.model.js";
 import { userModel } from "../models/user.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { sendTaskNotification } from "..//helpers/firebaseAdmin.js";
+import { sendTaskNotification } from "../helpers/firebaseAdmin.js";
 
 //new
 import path from "path";
 import fastCsv from "fast-csv";
 import { fileURLToPath } from "url";
 import { readCSVFile, deleteFile } from "../helpers/fileHelper.js";
-// import { parse as json2csv } from "json2csv";
+import { recipeModel } from "../models/recipe.model.js";
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const addTask = asyncHandler(async (req, res) => {
-  const { title, description, category, assignTo } = req.body;
+const addRecipe = asyncHandler(async (req, res) => {
+  const { title, ingredients, type, cookingTime } = req.body;
   const userId = req.user._id;
 
   //validation error
-  if ([title, description].some((fields) => fields?.trim() === "")) {
+  if ([title, type].some((fields) => fields?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const newTask = await taskModel.create({
+  const newTask = await recipeModel.create({
     title,
-    description,
-    category,
+    ingredients,
+    type,
+    cookingTime,
     createdBy: userId,
-    assignTo,
   });
 
   if (!newTask) {
     throw new ApiError(500, "Something went wrong while adding task");
-  }
-
-  // Send notification to assigned user
-  const assignedUser = await userModel.findById(assignTo);
-  if (assignedUser && assignedUser.fcmToken) {
-    try {
-      await sendTaskNotification(
-        assignedUser.fcmToken,
-        "New Task Assigned",
-        `You have been assigned a new task: ${title}`
-      );
-    } catch (error) {
-      console.error("Error sending notification:", error);
-      // Continue execution even if notification fails
-    }
   }
 
   return res
@@ -57,26 +41,26 @@ const addTask = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, newTask, "New Task added successfully"));
 });
 
-const deleteTask = asyncHandler(async (req, res) => {
+const deleteRecipe = asyncHandler(async (req, res) => {
   const { _id } = req.params;
 
-  const task = await taskModel.findOne({ _id });
+  const task = await recipeModel.findOne({ _id });
 
   if (!task) throw new ApiError(402, "Task not found");
 
-  const deletedTask = await taskModel.findOneAndDelete({ _id });
+  const deletedTask = await recipeModel.findOneAndDelete({ _id });
 
   return res
     .status(200)
     .json(new ApiResponse(200, deletedTask, "Task deleted successfully"));
 });
 
-const updateTask = asyncHandler(async (req, res) => {
+const updateRecipe = asyncHandler(async (req, res) => {
   const { title, description, category } = req.body;
   const { _id } = req.params;
 
   // validation error
-  const task = await taskModel.findByIdAndUpdate(_id, {
+  const task = await recipeModel.findByIdAndUpdate(_id, {
     title,
     description,
     category,
@@ -91,17 +75,17 @@ const updateTask = asyncHandler(async (req, res) => {
   }
 });
 
-const completeTask = asyncHandler(async (req, res) => {
+const completeRecipe = asyncHandler(async (req, res) => {
   const { _id } = req.params;
 
   // validation error
-  const isTask = await taskModel.findById(_id);
+  const isTask = await recipeModel.findById(_id);
   if (!isTask) {
     throw new ApiError(402, "Post not found");
   }
 
   //task update as completed
-  const task = await taskModel.findByIdAndUpdate(
+  const task = await recipeModel.findByIdAndUpdate(
     _id,
     { isCompleted: !isTask.isCompleted },
     { new: true }
@@ -112,26 +96,7 @@ const completeTask = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, task, "Task status updated"));
 });
 
-// const getTasks = asyncHandler(async (req, res) => {
-//   const user = req.user;
-//   let tasks;
-
-//   if (user.role == "admin") {
-//     tasks = await taskModel
-//       .find({})
-//       .populate("createdBy", "name")
-//       .populate("assignTo", "name");
-//   } else {
-//     tasks = await taskModel
-//       .find({ assignTo: req.user._id })
-//       .populate("createdBy", "name")
-//       .populate("assignTo", "name");
-//   }
-
-//   return res.json(new ApiResponse(200, tasks, "Tasks retrieved successfully"));
-// });
-
-const getTasks = asyncHandler(async (req, res) => {
+const getRecipes = asyncHandler(async (req, res) => {
   const { page = 1, filters = {} } = req.query;
   const limit = 10;
   const skip = (page - 1) * limit;
@@ -149,14 +114,14 @@ const getTasks = asyncHandler(async (req, res) => {
   let tasks;
 
   if (user.role == "admin") {
-    tasks = await taskModel
+    tasks = await recipeModel
       .find(query)
       .skip(skip)
       .limit(limit)
       .populate("createdBy", "name")
       .populate("assignTo", "name");
   } else {
-    tasks = await taskModel
+    tasks = await recipeModel
       .find({ ...query, assignTo: req.user._id })
       .skip(skip)
       .limit(limit)
@@ -167,7 +132,7 @@ const getTasks = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, tasks, "Tasks retrieved successfully"));
 });
 
-const importTasks = asyncHandler(async (req, res) => {
+const importRecipes = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new ApiError(400, "File not found. Please upload a CSV file.");
   }
@@ -204,7 +169,7 @@ const importTasks = asyncHandler(async (req, res) => {
     );
 
     // Insert the formatted tasks into the database
-    await taskModel.insertMany(formattedTasks);
+    await recipeModel.insertMany(formattedTasks);
 
     res
       .status(200)
@@ -217,8 +182,8 @@ const importTasks = asyncHandler(async (req, res) => {
   }
 });
 
-const exportTasks = asyncHandler(async (req, res) => {
-  const tasks = await taskModel
+const exportRecipes = asyncHandler(async (req, res) => {
+  const tasks = await recipeModel
     .find({})
     .populate("createdBy")
     .populate("assignTo");
@@ -246,11 +211,11 @@ const exportTasks = asyncHandler(async (req, res) => {
 });
 
 export {
-  addTask,
-  deleteTask,
-  updateTask,
-  getTasks,
-  completeTask,
-  importTasks,
-  exportTasks,
+  addRecipe,
+  deleteRecipe,
+  updateRecipe,
+  getRecipes,
+  completeRecipe,
+  importRecipes,
+  exportRecipes,
 };
