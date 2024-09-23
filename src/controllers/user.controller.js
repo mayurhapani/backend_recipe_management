@@ -98,12 +98,12 @@ const login = asyncHandler(async (req, res) => {
   } else {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
 
-    // set jwt token in cookie
-    res.cookie("token", token, {
+    // Set the token as an HTTP-only cookie
+    res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
     return res
@@ -125,11 +125,17 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const getUser = asyncHandler(async (req, res) => {
-  const user = req.user;
+  // Check if user is authenticated
+  if (!req.user) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "User is not authenticated"));
+  }
 
+  // If user is authenticated, return user data
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "User data got successfully"));
+    .json(new ApiResponse(200, req.user, "User data retrieved successfully"));
 });
 
 const getAllUsers = asyncHandler(async (req, res) => {

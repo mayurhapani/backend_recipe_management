@@ -92,19 +92,11 @@ const getRecipes = asyncHandler(async (req, res) => {
   const user = req.user;
   let tasks;
 
-  if (user.role == "admin") {
-    tasks = await recipeModel
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .populate("createdBy", "name");
-  } else {
-    tasks = await recipeModel
-      .find({ ...query, assignTo: req.user._id })
-      .skip(skip)
-      .limit(limit)
-      .populate("createdBy", "name");
-  }
+  tasks = await recipeModel
+    .find({ ...query })
+    .skip(skip)
+    .limit(limit)
+    .populate("createdBy", "name");
 
   return res.json(new ApiResponse(200, tasks, "Recipe retrieved successfully"));
 });

@@ -17,7 +17,8 @@ const recipeRouter = Router();
 recipeRouter.post("/register", isAuth, addRecipe);
 recipeRouter.delete("/delete/:_id", isAuth, deleteRecipe);
 recipeRouter.patch("/update/:_id", isAuth, updateRecipe);
-recipeRouter.get("/getRecipes", isAuth, getRecipes);
+
+recipeRouter.get("/getRecipes", getRecipes);
 recipeRouter.post("/import", isAuth, upload.single("file"), importRecipes);
 recipeRouter.get("/export", isAuth, exportRecipes);
 

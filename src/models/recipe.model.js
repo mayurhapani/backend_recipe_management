@@ -24,8 +24,13 @@ const recipeSchema = new Schema(
         "JAPANESE",
       ],
     },
+    instructions: {
+      type: String,
+      required: true,
+    },
     cookingTime: {
       type: Number,
+      required: true,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
