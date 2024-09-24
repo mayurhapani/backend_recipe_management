@@ -15,11 +15,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const addRecipe = asyncHandler(async (req, res) => {
-  const { title, ingredients, type, instructions, cookingTime } = req.body;
+  const { title, ingredients, type, instructions, cookingTime, image } =
+    req.body;
   const userId = req.user._id;
 
   // Validation
-  if ([title, ingredients, type, instructions, cookingTime].some((field) => field?.toString().trim() === "")) {
+  if (
+    [title, ingredients, type, instructions, cookingTime, image].some(
+      (field) => field?.toString().trim() === ""
+    )
+  ) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -29,6 +34,7 @@ const addRecipe = asyncHandler(async (req, res) => {
     type,
     instructions,
     cookingTime,
+    image,
     createdBy: userId,
   });
 
@@ -56,24 +62,34 @@ const deleteRecipe = asyncHandler(async (req, res) => {
 });
 
 const updateRecipe = asyncHandler(async (req, res) => {
-  const { title, ingredients, type, cookingTime } = req.body;
+  const { title, ingredients, type, instructions, cookingTime, image } =
+    req.body;
   const { _id } = req.params;
 
-  // validation error
-  const recipe = await recipeModel.findByIdAndUpdate(_id, {
-    title,
-    ingredients,
-    type,
-    cookingTime,
-  });
+  const recipe = await recipeModel.findById(_id);
 
   if (!recipe) {
-    throw new ApiError(402, "Post not found");
-  } else {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, recipe, "Task updated successfully"));
+    throw new ApiError(404, "Recipe not found");
   }
+
+  if (recipe.createdBy.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to update this recipe");
+  }
+
+  recipe.title = title;
+  recipe.ingredients = ingredients;
+  recipe.type = type;
+  recipe.instructions = instructions;
+  recipe.cookingTime = cookingTime;
+  if (image) {
+    recipe.image = image;
+  }
+
+  const updatedRecipe = await recipe.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedRecipe, "Recipe updated successfully"));
 });
 
 const getRecipes = asyncHandler(async (req, res) => {

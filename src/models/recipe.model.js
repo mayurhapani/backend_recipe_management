@@ -9,6 +9,7 @@ const recipeSchema = new Schema(
     },
     ingredients: {
       type: String,
+      required: true,
     },
     type: {
       type: String,
@@ -23,6 +24,7 @@ const recipeSchema = new Schema(
         "CHINESE",
         "JAPANESE",
       ],
+      required: true,
     },
     instructions: {
       type: String,
@@ -32,9 +34,14 @@ const recipeSchema = new Schema(
       type: Number,
       required: true,
     },
+    image: {
+      type: String,
+      required: true,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
   },
   { timestamps: true }
