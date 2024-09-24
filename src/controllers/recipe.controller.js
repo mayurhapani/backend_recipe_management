@@ -15,29 +15,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const addRecipe = asyncHandler(async (req, res) => {
-  const { title, ingredients, type, cookingTime } = req.body;
+  const { title, ingredients, type, instructions, cookingTime } = req.body;
   const userId = req.user._id;
 
-  //validation error
-  if ([title, type].some((fields) => fields?.trim() === "")) {
+  // Validation
+  if ([title, ingredients, type, instructions, cookingTime].some((field) => field?.toString().trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const newTask = await recipeModel.create({
+  const newRecipe = await recipeModel.create({
     title,
     ingredients,
     type,
+    instructions,
     cookingTime,
     createdBy: userId,
   });
 
-  if (!newTask) {
-    throw new ApiError(500, "Something went wrong while adding task");
+  if (!newRecipe) {
+    throw new ApiError(500, "Something went wrong while adding recipe");
   }
 
   return res
     .status(201)
-    .json(new ApiResponse(200, newTask, "New Task added successfully"));
+    .json(new ApiResponse(201, newRecipe, "New Recipe added successfully"));
 });
 
 const deleteRecipe = asyncHandler(async (req, res) => {
@@ -81,24 +82,26 @@ const getRecipes = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
   let query = {};
 
-  if (filters.priority) {
-    query.priority = filters.priority;
-  }
-
-  if (filters.status) {
-    query.status = filters.status;
+  if (filters.type) {
+    query.type = filters.type;
   }
 
   const user = req.user;
-  let tasks;
 
-  tasks = await recipeModel
-    .find({ ...query })
+  // If the user is not an admin, only show their own recipes
+  if (user.role !== "admin") {
+    query.createdBy = user._id;
+  }
+
+  const recipes = await recipeModel
+    .find(query)
     .skip(skip)
     .limit(limit)
     .populate("createdBy", "name");
 
-  return res.json(new ApiResponse(200, tasks, "Recipe retrieved successfully"));
+  return res.json(
+    new ApiResponse(200, recipes, "Recipes retrieved successfully")
+  );
 });
 
 const importRecipes = asyncHandler(async (req, res) => {
@@ -168,6 +171,30 @@ const exportRecipes = asyncHandler(async (req, res) => {
     .on("error", (err) => console.error(err));
 });
 
+const getAllRecipes = asyncHandler(async (req, res) => {
+  const recipes = await recipeModel.find().populate("createdBy", "name");
+  return res.json(
+    new ApiResponse(200, recipes, "All recipes retrieved successfully")
+  );
+});
+
+const getUserRecipes = asyncHandler(async (req, res) => {
+  const user = req.user;
+  let recipes;
+
+  if (user.role === "admin") {
+    recipes = await recipeModel.find().populate("createdBy", "name");
+  } else {
+    recipes = await recipeModel
+      .find({ createdBy: user._id })
+      .populate("createdBy", "name");
+  }
+
+  return res.json(
+    new ApiResponse(200, recipes, "User recipes retrieved successfully")
+  );
+});
+
 export {
   addRecipe,
   deleteRecipe,
@@ -175,4 +202,6 @@ export {
   getRecipes,
   importRecipes,
   exportRecipes,
+  getAllRecipes,
+  getUserRecipes,
 };

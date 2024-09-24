@@ -3,7 +3,8 @@ import {
   addRecipe,
   deleteRecipe,
   updateRecipe,
-  getRecipes,
+  getAllRecipes,
+  getUserRecipes,
   importRecipes,
   exportRecipes,
 } from "../controllers/recipe.controller.js";
@@ -13,13 +14,18 @@ import upload from "../middlewares/multer.js";
 
 const recipeRouter = Router();
 
-// Define your routes here
-recipeRouter.post("/register", isAuth, addRecipe);
-recipeRouter.delete("/delete/:_id", isAuth, deleteRecipe);
-recipeRouter.patch("/update/:_id", isAuth, updateRecipe);
+// Public route for home page
+recipeRouter.get("/getAllRecipes", getAllRecipes);
 
-recipeRouter.get("/getRecipes", getRecipes);
-recipeRouter.post("/import", isAuth, upload.single("file"), importRecipes);
-recipeRouter.get("/export", isAuth, exportRecipes);
+// Protected routes
+recipeRouter.use(isAuth);
+
+recipeRouter.post("/register", addRecipe);
+recipeRouter.delete("/delete/:_id", deleteRecipe);
+recipeRouter.patch("/update/:_id", updateRecipe);
+
+recipeRouter.get("/getUserRecipes", getUserRecipes);
+recipeRouter.post("/import", upload.single("file"), importRecipes);
+recipeRouter.get("/export", exportRecipes);
 
 export { recipeRouter };
