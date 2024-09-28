@@ -98,14 +98,12 @@ const login = asyncHandler(async (req, res) => {
   } else {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
 
-    // Set the token as an HTTP-only cookie
-    res.cookie('token', token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      secure: true,
+      sameSite: "none",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
-
     return res
       .status(200)
       .json(new ApiResponse(200, { user, token }, "User login successfully"));
