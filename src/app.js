@@ -2,9 +2,13 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { userRouter } from "./routers/user.router.js";
-import path from "path"; // Add this import
+import path from "path";
 import admin from "firebase-admin";
 import { recipeRouter } from "./routers/recipe.router.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,

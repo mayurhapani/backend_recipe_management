@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import csvParser from "csv-parser";
 import { ApiError } from "../utils/apiError.js";
 

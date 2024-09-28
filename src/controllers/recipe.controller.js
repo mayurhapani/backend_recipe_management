@@ -2,29 +2,20 @@ import { userModel } from "../models/user.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
-//new
 import path from "path";
 import fastCsv from "fast-csv";
 import { fileURLToPath } from "url";
 import { readCSVFile, deleteFile } from "../helpers/fileHelper.js";
 import { recipeModel } from "../models/recipe.model.js";
 
-// ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const addRecipe = asyncHandler(async (req, res) => {
-  const { title, ingredients, type, instructions, cookingTime, image } =
-    req.body;
+  const { title, ingredients, type, instructions, cookingTime, image } = req.body;
   const userId = req.user._id;
 
-  // Validation
-  if (
-    [title, ingredients, type, instructions, cookingTime, image].some(
-      (field) => field?.toString().trim() === ""
-    )
-  ) {
+  if ([title, ingredients, type, instructions, cookingTime, image].some((field) => field?.toString().trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -50,11 +41,11 @@ const addRecipe = asyncHandler(async (req, res) => {
 const deleteRecipe = asyncHandler(async (req, res) => {
   const { _id } = req.params;
 
-  const Recipe = await recipeModel.findOne({ _id });
+  const recipe = await recipeModel.findById(_id);
 
-  if (!Recipe) throw new ApiError(402, "Recipe not found");
+  if (!recipe) throw new ApiError(404, "Recipe not found");
 
-  const deletedRecipe = await recipeModel.findOneAndDelete({ _id });
+  const deletedRecipe = await recipeModel.findByIdAndDelete(_id);
 
   return res
     .status(200)
@@ -62,8 +53,7 @@ const deleteRecipe = asyncHandler(async (req, res) => {
 });
 
 const updateRecipe = asyncHandler(async (req, res) => {
-  const { title, ingredients, type, instructions, cookingTime, image } =
-    req.body;
+  const { title, ingredients, type, instructions, cookingTime, image } = req.body;
   const { _id } = req.params;
 
   const recipe = await recipeModel.findById(_id);
@@ -104,7 +94,6 @@ const getRecipes = asyncHandler(async (req, res) => {
 
   const user = req.user;
 
-  // If the user is not an admin, only show their own recipes
   if (user.role !== "admin") {
     query.createdBy = user._id;
   }
@@ -130,44 +119,38 @@ const importRecipes = asyncHandler(async (req, res) => {
   try {
     const tasks = await readCSVFile(filePath);
 
-    // Convert isCompleted and map user names to ObjectId
     const formattedTasks = await Promise.all(
       tasks.map(async (task) => {
-        // Find users by name for createdBy and assignTo fields
         const createdByUser = await userModel.findOne({ name: task.createdBy });
 
-        if (!createdByUser || !assignToUser) {
-          throw new ApiError(400, "Invalid user in createdBy or assignTo");
+        if (!createdByUser) {
+          throw new ApiError(400, "Invalid user in createdBy");
         }
 
-        // Return formatted task with ObjectId references
         return {
           ...task,
-          createdBy: createdByUser._id, // Replace name with ObjectId
-          createdAt: new Date(task.createdAt), // Ensure date is valid
-          updatedAt: new Date(task.updatedAt), // Ensure date is valid
+          createdBy: createdByUser._id,
+          createdAt: new Date(task.createdAt),
+          updatedAt: new Date(task.updatedAt),
         };
       })
     );
 
-    // Insert the formatted tasks into the database
     await recipeModel.insertMany(formattedTasks);
 
     res
       .status(200)
       .json(new ApiResponse(200, null, "Tasks imported successfully"));
   } catch (error) {
-    console.error("Error during CSV import:", error);
     throw new ApiError(500, "Error importing tasks");
   } finally {
-    deleteFile(filePath); // Clean up the file after processing
+    deleteFile(filePath);
   }
 });
 
 const exportRecipes = asyncHandler(async (req, res) => {
   const tasks = await recipeModel.find({}).populate("createdBy");
 
-  // Process the data to remove unwanted fields and ensure proper CSV format
   const csvData = [];
   tasks.forEach((task) => {
     const cleanTask = {

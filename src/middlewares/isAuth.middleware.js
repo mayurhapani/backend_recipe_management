@@ -3,15 +3,17 @@ import jwt from "jsonwebtoken";
 
 const isAuth = async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token =
+      req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
+
     if (!token) {
       req.user = null;
       return next();
     }
-    
+
     const { id } = jwt.verify(token, process.env.JWT_SECRET);
     const user = await userModel.findOne({ _id: id });
-    
+
     if (!user) {
       req.user = null;
     } else {
